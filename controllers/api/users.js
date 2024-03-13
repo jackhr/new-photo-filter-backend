@@ -8,13 +8,18 @@ module.exports = {
 };
 
 async function create(req, res) {
+    let token = null;
+    let message = 'Logged In';
     try {
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser !== null) throw new Error('Please choose a different email.');
         const user = await User.create(req.body);
-        const token = createJWT(user);
-        res.json(token);
+        token = createJWT(user);
     } catch (err) {
-        res.status(400).json(err);
+        res.status(400);
+        message = err.message;
     }
+    res.json({ message, token });
 }
 
 async function login(req, res) {
