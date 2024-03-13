@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const usersCtrl = require('../../controllers/api/users');
 
 // Starts with /api/users
-router.post('/', function(req, res) {
-    res.json({ message: 'User created', data: req.body});
-});
+router.post('/', usersCtrl.create);
+router.post('/login', usersCtrl.login);
 
 module.exports = router;
