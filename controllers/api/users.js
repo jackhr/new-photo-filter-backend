@@ -18,15 +18,19 @@ async function create(req, res) {
 }
 
 async function login(req, res) {
+    let token = null;
+    let message = 'Logged In';
     try {
         const user = await User.findOne({ email: req.body.email });
-        if (!user) throw new Error();
+        if (!user) throw new Error('User not found.');
         const match = await bcrypt.compare(req.body.password, user.password);
-        if (!match) throw new Error();
-        res.json(createJWT(user));
-    } catch {
-        res.status(400).json('Bad Credentials');
+        if (!match) throw new Error('Bad credentials.');
+        token = createJWT(user);
+    } catch(err) {
+        res.status(400);
+        message = err.message;
     }
+    res.json({ message, token });
 }
 
 /*--- Helper Functions ---*/
