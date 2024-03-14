@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 
 module.exports = {
     create,
-    login
+    signIn
 };
 
 async function create(req, res) {
@@ -22,9 +22,9 @@ async function create(req, res) {
     res.json({ message, token });
 }
 
-async function login(req, res) {
+async function signIn(req, res) {
     let token = null;
-    let message = 'Logged In';
+    let message = 'Signed In';
     try {
         const user = await User.findOne({ email: req.body.email });
         if (!user) throw new Error('User not found.');
