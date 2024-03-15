@@ -9,7 +9,20 @@ const BUCKET = process.env.S3_BUCKET;
 const REGION = process.env.REGION;
 
 module.exports = {
-    create
+    create,
+    getAll
+}
+
+async function getAll(req, res) {
+    let message = 'Photos retrieved successfully.';
+    let photos = [];
+    try {
+        photos = await getUserPhotos(req.user);
+    } catch(err) {
+        message = err.message;
+        res.status(400);
+    }
+    res.json({ message, photos });
 }
 
 async function getUserPhotos(user) {
