@@ -22,7 +22,7 @@ async function deleteOne(req, res) {
         if (photo.user.toString() !== req.user._id.toString()) {
             throw new Error('Invalid Request');
         }
-        deleteImage(photo.AWSKey);
+        await deleteImage(photo.AWSKey);
         await photo.deleteOne();
     } catch (err) {
         message = err.message;
