@@ -4,5 +4,6 @@ const photosCtrl = require('../../controllers/api/photos');
 
 router.get('/', photosCtrl.getAll);
 router.post('/', photosCtrl.create);
+router.delete('/:id', photosCtrl.deleteOne);
 
 module.exports = router;

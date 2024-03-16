@@ -3,6 +3,7 @@ const uuid = require('uuid');
 const {
     S3Client,
     PutObjectCommand,
+    DeleteObjectCommand
 } = require("@aws-sdk/client-s3");
 const BASE_URL = process.env.S3_BASE_URL;
 const BUCKET = process.env.S3_BUCKET;
@@ -10,7 +11,25 @@ const REGION = process.env.REGION;
 
 module.exports = {
     create,
-    getAll
+    deleteOne,
+    getAll,
+}
+
+async function deleteOne(req, res) {
+    let message = 'Photo Deleted';
+    try {
+        const photo = await Photo.findById(req.params.id);
+        if (photo.user.toString() !== req.user._id.toString()) {
+            throw new Error('Invalid Request');
+        }
+        deleteImage(photo.AWSKey);
+        await photo.deleteOne();
+    } catch (err) {
+        message = err.message;
+        res.status(400);
+    }
+    const photos = await getUserPhotos(req.user);
+    res.json({ message, photos });
 }
 
 async function getAll(req, res) {
@@ -18,7 +37,7 @@ async function getAll(req, res) {
     let photos = [];
     try {
         photos = await getUserPhotos(req.user);
-    } catch(err) {
+    } catch (err) {
         message = err.message;
         res.status(400);
     }
@@ -75,6 +94,30 @@ async function getNewImageUrl(photo) {
         } catch (err) {
             res.success = false;
             res.message = `Error uploading ${uploadParams.Key}: ${err.message}`;
+        }
+        return res;
+    };
+    const runRes = await run();
+    return {
+        url: `${BASE_URL}${BUCKET}/${uploadParams.Key}`,
+        key: uploadParams.Key,
+        ...runRes
+    };
+}
+
+async function deleteImage(key) {
+    const uploadParams = {
+        Bucket: process.env.S3_BUCKET,
+        Key: key,
+    }
+    const s3 = new S3Client({ region: REGION });
+    const run = async () => {
+        const res = { success: true, message: `Successfully deleted ${uploadParams.Key}:` };
+        try {
+            const data = await s3.send(new DeleteObjectCommand(uploadParams));
+        } catch (err) {
+            res.success = false;
+            res.message = `Error deleting ${uploadParams.Key}: ${err.message}`;
         }
         return res;
     };
