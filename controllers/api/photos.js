@@ -1,12 +1,12 @@
 const uuid = require('uuid');
 const Jimp = require('jimp');
 const Photo = require('../../models/photo');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const {
     redisClient,
     connectRedis,
     disconnectRedis
 } = require('../../config/redisClient');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const {
     S3Client,
     PutObjectCommand,
@@ -96,7 +96,7 @@ async function applyFilter(req, res) {
 }
 
 async function deleteOne(req, res) {
-    let message = 'Photo Deleted';
+    const response = { message: 'Photo Deleted', photos: []};
     try {
         const photo = await Photo.findById(req.params.id);
         if (photo.user.toString() !== req.user._id.toString()) {
@@ -105,11 +105,11 @@ async function deleteOne(req, res) {
         await deleteImage(photo.AWSKey);
         await photo.deleteOne();
     } catch (err) {
-        message = err.message;
+        response.message = err.message;
         res.status(400);
     }
-    const photos = await getUserPhotos(req.user);
-    res.json({ message, photos });
+    response.photos = await getUserPhotos(req.user);
+    res.json(response);
 }
 
 async function getAll(req, res) {
@@ -126,7 +126,7 @@ async function getAll(req, res) {
             }
         }));
 
-        response.photos = photosWithSignedUrls; // Now photos contains signed URLs from AWS
+        response.photos = photosWithSignedUrls;
     } catch (err) {
         console.error("Error getting user photos:", err);
         response.message = err.message;
@@ -141,16 +141,18 @@ async function getUserPhotos(user) {
 }
 
 async function create(req, res) {
-    let message = 'Photo Created';
+    const response = { message: 'Photos retrieved successfully.', photo: {} };
     try {
         const AWSData = await getNewImageUrl(req.file);
         if (AWSData.success) {
-            await Photo.create({
+            const photo = await Photo.create({
                 ...req.body,
                 AWSKey: AWSData.key,
                 sourceURL: AWSData.url,
                 user: req.user._id
             });
+            const signedUrl = await generateSignedUrl(photo.AWSKey);
+            response.photo = { ...photo._doc, signedUrl };
         } else {
             throw new Error(AWSData.message);
         }
@@ -158,8 +160,7 @@ async function create(req, res) {
         message = err.message;
         res.status(400);
     }
-    const photos = await getUserPhotos(req.user);
-    res.json({ message, photos });
+    res.json(response);
 }
 
 /*-----Helper Functions-----*/
