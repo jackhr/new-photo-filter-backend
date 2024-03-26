@@ -1,7 +1,12 @@
 const uuid = require('uuid');
 const Jimp = require('jimp');
 const Photo = require('../../models/photo');
-const redisClient = require('../../config/redisClient');
+const {
+    redisClient,
+    connectRedis,
+    disconnectRedis
+} = require('../../config/redisClient');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const {
     S3Client,
     PutObjectCommand,
@@ -23,6 +28,7 @@ async function applyFilter(req, res) {
     let message = 'Filter Applied';
     let filteredPhotoUrl = null;
     try {
+        await connectRedis();
         const filterType = req.body.filterType;
         const filteredPhotoKey = `photo:${req.params.id}:${filterType}`;
         filteredPhotoUrl = await redisClient.get(filteredPhotoKey);
@@ -84,7 +90,7 @@ async function applyFilter(req, res) {
         message = err.message;
         res.status(400);
     } finally {
-        await redisClient.disconnect();
+        await disconnectRedis();
     }
     res.json({ message, filteredPhotoUrl });
 }

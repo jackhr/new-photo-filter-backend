@@ -1,4 +1,3 @@
-// redisClient.js
 const Redis = require('redis');
 
 const redisClient = Redis.createClient({
@@ -20,7 +19,23 @@ const connectRedis = async () => {
     }
 };
 
+//Implement disconnection logic here
+const disconnectRedis = async () => {
+    try {
+        await redisClient.disconnect();
+        console.log('Disconnected from Redis server');
+    } catch (err) {
+        console.error('Redis disconnection error:', err);
+        // Implement retry logic or exit if critical
+    }
+}
+
+
 // Ensure this is called at application startup
 connectRedis();
 
-module.exports = redisClient;
+module.exports = {
+    redisClient,
+    connectRedis,
+    disconnectRedis
+};
