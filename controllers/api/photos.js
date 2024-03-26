@@ -1,7 +1,7 @@
-const Photo = require('../../models/photo');
 const uuid = require('uuid');
 const Jimp = require('jimp');
-const Redis = require('redis');
+const Photo = require('../../models/photo');
+const redisClient = require('../../config/redisClient');
 const {
     S3Client,
     PutObjectCommand,
@@ -11,22 +11,6 @@ const {
 const BASE_URL = process.env.S3_BASE_URL;
 const BUCKET = process.env.S3_BUCKET;
 const REGION = process.env.REGION;
-const REDIS_DEFAULT_EXPIRATION = process.env.REDIS_DEFAULT_EXPIRATION;
-const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
-const REDIS_HOST = process.env.REDIS_HOST;
-const REDIS_PORT = process.env.REDIS_PORT;
-
-const redisClient = Redis.createClient({
-    url: `redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}`
-});
-
-redisClient.on('connect', () => {
-    console.log('Connected to Redis server');
-});
-
-redisClient.on('error', (err) => {
-    console.error('Redis error:', err);
-});
 
 module.exports = {
     applyFilter,
@@ -39,7 +23,6 @@ async function applyFilter(req, res) {
     let message = 'Filter Applied';
     let filteredPhotoUrl = null;
     try {
-        await redisClient.connect();
         const filterType = req.body.filterType;
         const filteredPhotoKey = `photo:${req.params.id}:${filterType}`;
         filteredPhotoUrl = await redisClient.get(filteredPhotoKey);

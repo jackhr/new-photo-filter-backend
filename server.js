@@ -1,9 +1,10 @@
-const express = require('express');
 const logger = require('morgan');
-const upload  = require('multer')();
+const express = require('express');
+const upload = require('multer')();
 
 require('dotenv').config();
 require('./config/database');
+require('./config/redisClient');
 
 const app = express();
 
@@ -16,6 +17,6 @@ app.use('/api/photos', upload.single('photo'), require('./routes/api/photos'));
 
 const port = process.env.PORT || 3001;
 
-app.listen(port, function() {
-  console.log(`Express app running on port ${port}`);
+app.listen(port, function () {
+    console.log(`Express app running on port ${port}`);
 });
