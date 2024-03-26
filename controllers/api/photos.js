@@ -5,7 +5,8 @@ const Redis = require('redis');
 const {
     S3Client,
     PutObjectCommand,
-    DeleteObjectCommand
+    DeleteObjectCommand,
+    GetObjectCommand
 } = require("@aws-sdk/client-s3");
 const BASE_URL = process.env.S3_BASE_URL;
 const BUCKET = process.env.S3_BUCKET;
@@ -123,15 +124,26 @@ async function deleteOne(req, res) {
 }
 
 async function getAll(req, res) {
-    let message = 'Photos retrieved successfully.';
-    let photos = [];
+    const response = { message: 'Photos retrieved successfully.', photos: [] };
     try {
-        photos = await getUserPhotos(req.user);
+        const photos = await getUserPhotos(req.user);
+        const photosWithSignedUrls = await Promise.all(photos.map(async (photo) => {
+            try {
+                const signedUrl = await generateSignedUrl(photo.AWSKey);
+                return { ...photo._doc, signedUrl };
+            } catch (error) {
+                console.error("Error generating signed URL:", error);
+                return { ...photo._doc, signedUrl: null };
+            }
+        }));
+
+        response.photos = photosWithSignedUrls; // Now photos contains signed URLs from AWS
     } catch (err) {
-        message = err.message;
+        console.error("Error getting user photos:", err);
+        response.message = err.message;
         res.status(400);
     }
-    res.json({ message, photos });
+    res.json(response);
 }
 
 async function getUserPhotos(user) {
@@ -143,7 +155,6 @@ async function create(req, res) {
     let message = 'Photo Created';
     try {
         const AWSData = await getNewImageUrl(req.file);
-        console.log("AWSData:", AWSData);
         if (AWSData.success) {
             await Photo.create({
                 ...req.body,
@@ -163,6 +174,15 @@ async function create(req, res) {
 }
 
 /*-----Helper Functions-----*/
+
+async function generateSignedUrl(AWSKey, Expires = 30) { // Default expiration time: 15 minutes
+    const s3 = new S3Client({ region: REGION });
+    const getParams = {
+        Bucket: BUCKET,
+        Key: AWSKey
+    };
+    return await getSignedUrl(s3, new GetObjectCommand(getParams), { expiresIn: Expires });
+}
 
 function generateAWSKey(photo) {
     const hex = uuid.v4().slice(uuid.v4().length - 6);
