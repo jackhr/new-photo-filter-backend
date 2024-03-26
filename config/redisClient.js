@@ -30,10 +30,6 @@ const disconnectRedis = async () => {
     }
 }
 
-
-// Ensure this is called at application startup
-connectRedis();
-
 module.exports = {
     redisClient,
     connectRedis,
